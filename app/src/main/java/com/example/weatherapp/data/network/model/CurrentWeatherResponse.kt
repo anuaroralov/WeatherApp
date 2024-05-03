@@ -3,6 +3,6 @@ package com.example.weatherapp.data.network.model
 import com.google.gson.annotations.SerializedName
 
 data class CurrentWeatherResponse(
-    @SerializedName("location") var location: Location? = null,
-    @SerializedName("current") var current: Current? = null
+    @SerializedName("location") var location: LocationDto? = null,
+    @SerializedName("current") var current: CurrentDto? = null
 )
