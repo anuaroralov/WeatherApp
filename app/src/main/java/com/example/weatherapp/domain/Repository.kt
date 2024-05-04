@@ -10,4 +10,6 @@ interface Repository {
     suspend fun getCurrentWeather(q: String): CurrentWeather
 
     suspend fun getListOfWeather():List<CurrentWeather>
+
+    suspend fun addToList(name: String)
 }

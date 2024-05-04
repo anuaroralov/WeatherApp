@@ -1,5 +1,6 @@
 package com.example.weatherapp.data
 
+import com.example.weatherapp.data.database.CurrentWeatherDbModel
 import com.example.weatherapp.data.database.WeatherDao
 import com.example.weatherapp.data.network.ApiService
 import com.example.weatherapp.data.network.model.CurrentWeatherResponse
@@ -22,7 +23,7 @@ class RepositoryImpl @Inject constructor(
     }
 
     override suspend fun getListOfWeather():List<CurrentWeather> {
-        val cities = weatherDao.getShopList()
+        val cities = weatherDao.getWeatherList()
 
         val weatherResults = mutableListOf<CurrentWeatherResponse>()
 
@@ -38,6 +39,9 @@ class RepositoryImpl @Inject constructor(
         return weatherResults.map{it.mapToEntity()}
     }
 
+    override suspend fun addToList(name: String) {
+        weatherDao.insertWeatherItem(CurrentWeatherDbModel(name))
+    }
 
 
 }

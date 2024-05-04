@@ -13,7 +13,7 @@ object ApiFactory {
     private val BASE_URL = "https://api.weatherapi.com/v1/"
 
     private val client = OkHttpClient.Builder()
-        .addInterceptor(QueryInterceptor(hashMapOf("api_key" to BuildConfig.API_KEY)))
+        .addInterceptor(QueryInterceptor(hashMapOf("key" to BuildConfig.API_KEY)))
         .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
         .build()
 

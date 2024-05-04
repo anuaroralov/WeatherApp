@@ -1,6 +1,7 @@
 package com.example.weatherapp.presentation
 
 import android.app.Application
+import com.example.weatherapp.di.DaggerApplicationComponent
 
 class MyApplication : Application() {
 

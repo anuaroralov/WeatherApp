@@ -5,7 +5,6 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "weather_items")
 data class CurrentWeatherDbModel(
-    @PrimaryKey(autoGenerate = true)
-    val id:Int,
+    @PrimaryKey
     val name:String,
 )
