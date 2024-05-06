@@ -9,4 +9,4 @@ https://www.weatherapi.com/docs/
 
 1) Anuar Oralov
 2) Oryngali Dauir
-3) Orazkhan Erasyl
+3) Orazkhan Yerasyl
