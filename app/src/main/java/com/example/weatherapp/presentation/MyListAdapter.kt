@@ -11,7 +11,7 @@ import com.example.weatherapp.databinding.ItemWeatherBinding
 import com.example.weatherapp.domain.model.CurrentWeather
 
 class MyListAdapter(private val context: Context, private val onClickListener: (CurrentWeather) -> Unit) :
-    ListAdapter<CurrentWeather, MyListAdapter.WeatherViewHolder>(CatDiffCallback) {
+    ListAdapter<CurrentWeather, MyListAdapter.WeatherViewHolder>(MyListDiffCallback) {
 
     class WeatherViewHolder(
         val binding: ItemWeatherBinding
@@ -33,7 +33,7 @@ class MyListAdapter(private val context: Context, private val onClickListener: (
                 tvName.text = currentWeather.location?.name
                 tvTime.text =currentWeather.current?.lastUpdated
                 tvCondition.text= currentWeather.current?.condition?.text
-                tvTemperature.text=currentWeather.current?.tempC.toString()
+                tvTemperature.text=currentWeather.current?.tempC.toString()+"°"
                 tvFeelsLike.text=currentWeather.current?.feelsLikeC.toString()
                 Glide.with(context)
                     .load(currentWeather.current?.condition?.icon)
@@ -41,13 +41,13 @@ class MyListAdapter(private val context: Context, private val onClickListener: (
 
 
                 root.setOnClickListener {
-                    onClickListener
+                    onClickListener(currentWeather)
                 }
             }
         }
     }
 
-    object CatDiffCallback : DiffUtil.ItemCallback<CurrentWeather>() {
+    object MyListDiffCallback : DiffUtil.ItemCallback<CurrentWeather>() {
 
         override fun areItemsTheSame(oldItem: CurrentWeather, newItem: CurrentWeather): Boolean {
             return oldItem.location?.name == newItem.location?.name

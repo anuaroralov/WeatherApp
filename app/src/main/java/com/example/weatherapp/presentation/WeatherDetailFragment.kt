@@ -1,60 +1,101 @@
 package com.example.weatherapp.presentation
 
+import android.content.Context
 import android.os.Bundle
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import com.example.weatherapp.R
+import android.widget.Toast
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
+import com.example.weatherapp.databinding.FragmentWeatherDetailBinding
+import com.example.weatherapp.domain.model.ForecastWeather
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [WeatherDetailFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class WeatherDetailFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
+    private val args by navArgs<WeatherDetailFragmentArgs>()
+    private var _binding: FragmentWeatherDetailBinding? = null
+    private val binding get() = _binding ?: throw RuntimeException("FragmentWeatherDetailBinding is null")
+
+    @Inject
+    lateinit var viewModelFactory: WeatherViewModelFactory
+
+    private val viewModel by lazy {
+        ViewModelProvider(this, viewModelFactory)[WeatherViewModel::class.java]
+    }
+
+    private val component by lazy {
+        (requireActivity().application as MyApplication).component
+    }
+
+    override fun onAttach(context: Context) {
+        component.inject(this)
+        super.onAttach(context)
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_weather_detail, container, false)
+    ): View {
+        _binding = FragmentWeatherDetailBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment WeatherDetailFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            WeatherDetailFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            if (isLoading) {
+                binding.progressBar.visibility = View.VISIBLE
+                binding.contentContainer.visibility = View.GONE
+                binding.floatingActionButton2.visibility=View.GONE
+            } else {
+                binding.progressBar.visibility = View.GONE
+                binding.contentContainer.visibility = View.VISIBLE
+                binding.floatingActionButton2.visibility=View.VISIBLE
             }
+        }
+
+        lifecycleScope.launch {
+            try {
+                val forecastWeather = viewModel.getWeatherForecast(args.location)
+                bindWeatherData(forecastWeather)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private suspend fun bindWeatherData(forecastWeather: ForecastWeather) {
+        with(binding) {
+
+            floatingActionButton2.setOnClickListener {
+                viewModel.addToList(forecastWeather.location?.name ?: "")
+            }
+
+            temperature.text = forecastWeather.current?.tempC.toString()+"°"
+            location.text = forecastWeather.location?.name
+            weatherDescription.text = forecastWeather.current?.condition?.text
+            Glide.with(requireContext())
+                .load(forecastWeather.current?.condition?.icon)
+                .into(imageView2)
+            highLowTemp.text = forecastWeather.current?.feelsLikeC.toString()+"°"
+
+            val hourAdapter = HourWeatherListAdapter(requireContext())
+            hourRecyclerView.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            hourRecyclerView.adapter = hourAdapter
+            hourAdapter.submitList(forecastWeather.forecast?.forecastDay?.get(0)?.hour)
+
+            val dayAdapter = DayWeatherListAdapter(requireContext())
+            dayRecyclerView.layoutManager = LinearLayoutManager(requireContext())
+            dayRecyclerView.adapter = dayAdapter
+            dayAdapter.submitList(forecastWeather.forecast?.forecastDay)
+        }
     }
 }

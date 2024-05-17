@@ -19,4 +19,7 @@ interface WeatherDao {
 
     @Query("SELECT * FROM weather_items WHERE name=:weatherItemId LIMIT 1")
     fun getWeatherItem(weatherItemId: String): CurrentWeatherDbModel
+
+    @Query("SELECT COUNT(*) FROM weather_items WHERE name=:weatherItemName")
+    fun isWeatherItemExists(weatherItemName: String): Int
 }

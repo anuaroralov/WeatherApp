@@ -46,4 +46,8 @@ class RepositoryImpl @Inject constructor(
     override suspend fun deleteFromList(name: String) {
         weatherDao.deleteWeatherItem(name)
     }
+
+    override suspend fun isWeatherItemExists(name: String): Boolean {
+        return weatherDao.isWeatherItemExists(name) > 0
+    }
 }

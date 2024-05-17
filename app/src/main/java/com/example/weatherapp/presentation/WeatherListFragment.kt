@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.SearchView
 import android.widget.SimpleCursorAdapter
+import androidx.navigation.fragment.findNavController
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -22,11 +23,10 @@ import javax.inject.Inject
 
 class WeatherListFragment : Fragment() {
     private var _binding: FragmentWeatherListBinding? = null
-    private val binding: FragmentWeatherListBinding
-        get() = _binding ?: throw RuntimeException("FragmentWeatherListBinding is null")
+    private val binding get() = _binding ?: throw RuntimeException("FragmentWeatherListBinding is null")
 
     private lateinit var adapter: MyListAdapter
-    lateinit var searchAdapter: SimpleCursorAdapter
+    private lateinit var searchAdapter: SimpleCursorAdapter
 
     @Inject
     lateinit var viewModelFactory: WeatherViewModelFactory
@@ -47,7 +47,7 @@ class WeatherListFragment : Fragment() {
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         _binding = FragmentWeatherListBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -55,12 +55,25 @@ class WeatherListFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel.refreshList()
+
+        setupRecyclerView()
+        setupSearchView()
+        setupSwipeRefresh()
+
+        observeViewModel()
+    }
+
+    private fun setupRecyclerView() {
         adapter = MyListAdapter(requireContext()) {
-            launchDetailFragment(it.location?.name?:"")
+            launchDetailFragment(it.location?.name ?: "")
         }
-
+        binding.recyclerView.layoutManager = LinearLayoutManager(requireContext())
+        binding.recyclerView.adapter = adapter
         setupSwipeListener(binding.recyclerView)
+    }
 
+    private fun setupSearchView() {
         searchAdapter = SimpleCursorAdapter(
             requireContext(),
             android.R.layout.simple_list_item_1,
@@ -69,58 +82,50 @@ class WeatherListFragment : Fragment() {
             intArrayOf(android.R.id.text1),
             0
         )
-
-        binding.swipeRefreshLayout.setOnRefreshListener {
-            viewModel.refreshList()
-        }
-
-        binding.recyclerView.layoutManager = LinearLayoutManager(activity)
-        binding.recyclerView.adapter = adapter
-
         val searchManager = requireContext().getSystemService(Context.SEARCH_SERVICE) as SearchManager
         binding.searchView.apply {
             setSearchableInfo(searchManager.getSearchableInfo(requireActivity().componentName))
             suggestionsAdapter = searchAdapter
+            setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                override fun onQueryTextSubmit(query: String?): Boolean {
+                    launchDetailFragment(query.orEmpty())
+                    return true
+                }
+
+                override fun onQueryTextChange(newText: String?): Boolean {
+                    viewModel.clearSuggestions()
+                    newText?.let { viewModel.getCurrentWeather(it) }
+                    return true
+                }
+            })
+            setOnSuggestionListener(object : SearchView.OnSuggestionListener {
+                override fun onSuggestionSelect(position: Int) = false
+
+                override fun onSuggestionClick(position: Int): Boolean {
+                    val cursor = searchAdapter.cursor
+                    cursor.moveToPosition(position)
+                    val columnIndex = cursor.getColumnIndex("suggestion")
+                    if (columnIndex >= 0) {
+                        val suggestion = cursor.getString(columnIndex)
+                        binding.searchView.setQuery(suggestion, true)
+                    } else {
+                        Toast.makeText(requireContext(), "Suggestion not found", Toast.LENGTH_SHORT).show()
+                    }
+                    return true
+                }
+            })
         }
+    }
 
-        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean {
+    private fun setupSwipeRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshList()
+        }
+    }
 
-                launchDetailFragment(binding.searchView.query.toString())
-                return true
-            }
-
-            override fun onQueryTextChange(newText: String?): Boolean {
-                viewModel.clearSuggestions()
-                newText?.let {
-                    viewModel.getCurrentWeather(it)
-                }
-                return true
-            }
-        })
-
-        binding.searchView.setOnSuggestionListener(object : SearchView.OnSuggestionListener {
-            override fun onSuggestionSelect(position: Int): Boolean {
-                return false
-            }
-
-            override fun onSuggestionClick(position: Int): Boolean {
-                val cursor = searchAdapter.cursor
-                cursor.moveToPosition(position)
-                val columnIndex = cursor.getColumnIndex("suggestion")
-                if (columnIndex >= 0) {
-                    val suggestion = cursor.getString(columnIndex)
-                    binding.searchView.setQuery(suggestion, true)
-                } else {
-                    Toast.makeText(requireContext(), "Suggestion not found", Toast.LENGTH_SHORT).show()
-                }
-                return true
-            }
-        })
-
+    private fun observeViewModel() {
         viewModel.listOfWeather.observe(viewLifecycleOwner) {
             adapter.submitList(it)
-
         }
 
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
@@ -144,38 +149,22 @@ class WeatherListFragment : Fragment() {
     }
 
     private fun setupSwipeListener(rvShopList: RecyclerView) {
-        val callback = object : ItemTouchHelper.SimpleCallback(
-            0,
-            ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
-        ) {
-
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
-                return false
-            }
+        val callback = object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder) = false
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val item = adapter.currentList[viewHolder.adapterPosition]
-                viewModel.deleteFromList(item.location?.name ?: "").invokeOnCompletion {
+                viewModel.deleteFromList(item.location?.name.orEmpty()).invokeOnCompletion {
                     viewModel.refreshList()
                 }
             }
         }
-        val itemTouchHelper = ItemTouchHelper(callback)
-        itemTouchHelper.attachToRecyclerView(rvShopList)
+        ItemTouchHelper(callback).attachToRecyclerView(rvShopList)
     }
 
-    private fun launchDetailFragment(name:String) {
-        if(name.isEmpty()){
-
-        }
-        else{
-//            findNavController().navigate(WeatherListFragmentDirections.actionWeatherListFragmentToWeatherDetailFragment(name))
+    private fun launchDetailFragment(name: String) {
+        if (name.isNotEmpty()) {
+            findNavController().navigate(WeatherListFragmentDirections.actionWeatherListFragmentToWeatherDetailFragment(name))
         }
     }
 }
-
-

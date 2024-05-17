@@ -14,4 +14,6 @@ interface Repository {
     suspend fun addToList(name: String)
 
     suspend fun deleteFromList(name: String)
+
+    suspend fun isWeatherItemExists(name:String):Boolean
 }
