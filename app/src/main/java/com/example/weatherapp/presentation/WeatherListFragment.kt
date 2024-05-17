@@ -62,6 +62,10 @@ class WeatherListFragment : Fragment() {
         setupSwipeRefresh()
 
         observeViewModel()
+
+        binding.button.setOnClickListener {
+            viewModel.refreshList()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -145,6 +149,16 @@ class WeatherListFragment : Fragment() {
                 cursor.addRow(arrayOf(index, suggestion))
             }
             searchAdapter.changeCursor(cursor)
+        }
+
+        viewModel.internetConnection.observe(viewLifecycleOwner) { isConnected ->
+            if (!isConnected) {
+                binding.constraintLayout.visibility = View.GONE
+                binding.button.visibility = View.VISIBLE
+            } else {
+                binding.constraintLayout.visibility = View.VISIBLE
+                binding.button.visibility = View.GONE
+            }
         }
     }
 

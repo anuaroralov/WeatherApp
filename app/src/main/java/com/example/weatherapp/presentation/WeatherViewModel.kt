@@ -1,6 +1,5 @@
 package com.example.weatherapp.presentation
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -41,32 +40,41 @@ class WeatherViewModel @Inject constructor(
     private val _suggestions = MutableLiveData<List<String>>()
     val suggestions: LiveData<List<String>> = _suggestions
 
+    private val _internetConnection = MutableLiveData<Boolean>(true)
+    val internetConnection: LiveData<Boolean> = _internetConnection
+
     init {
         refreshList()
     }
 
-    fun refreshList(): Job {
-        _isLoading.postValue(true)
-        return viewModelScope.launch(Dispatchers.IO) {
-            try {
-                if (networkChecker.isInternetAvailable()) {
+    fun refreshList() {
+        if (isInternetAvailable()) {
+            _isLoading.postValue(true)
+            _internetConnection.postValue(true)
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
                     val listOfWeather = getListOfWeather()
                     _listOfWeather.postValue(listOfWeather)
-                } else {
-                    postErrorMessage("Internet is not available")
+                } catch (e: Exception) {
+                    postErrorMessage("Error refreshing list: ${e.message}")
+                } finally {
+                    _isLoading.postValue(false)
                 }
-            } catch (e: Exception) {
-                postErrorMessage("Error refreshing list: ${e.message}")
-            } finally {
-                _isLoading.postValue(false)
             }
+        } else {
+            _internetConnection.postValue(false)
+            postErrorMessage("Internet is not available")
         }
+    }
+
+    private fun isInternetAvailable(): Boolean {
+        return networkChecker.isInternetAvailable()
     }
 
     suspend fun getWeatherForecast(location: String): ForecastWeather {
         _isLoading.postValue(true)
         return try {
-            val forecast = getWeatherForecastUseCase(location,7)
+            val forecast = getWeatherForecastUseCase(location, 7)
             forecast
         } finally {
             _isLoading.postValue(false)
@@ -84,7 +92,7 @@ class WeatherViewModel @Inject constructor(
                 val suggestions = weatherResponse?.let { listOf(it) } ?: emptyList()
                 _suggestions.postValue(suggestions)
             } catch (e: Exception) {
-                if(e.message.toString().trim() != (" HTTP 400").toString().trim()){
+                if (e.message.toString().trim() != "HTTP 400".toString().trim()) {
                     postErrorMessage("Error fetching weather: ${e.message}")
                 }
             }
@@ -115,7 +123,6 @@ class WeatherViewModel @Inject constructor(
         }
     }
 
-
     fun clearErrorMessage() {
         _errorMessages.value = ""
     }
@@ -124,5 +131,4 @@ class WeatherViewModel @Inject constructor(
         _suggestions.value = emptyList()
     }
 }
-
 
