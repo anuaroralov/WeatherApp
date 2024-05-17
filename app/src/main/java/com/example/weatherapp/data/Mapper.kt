@@ -19,6 +19,8 @@ import com.example.weatherapp.domain.model.ForecastWeather
 import com.example.weatherapp.domain.model.Hour
 import com.example.weatherapp.domain.model.Location
 
+const val BASE_URL="https:/"
+
 internal fun CurrentWeatherResponse.mapToEntity(): CurrentWeather {
     return CurrentWeather(
         location = location?.mapToEntity(),
@@ -65,7 +67,7 @@ internal fun ForecastDto.mapToEntity(): Forecast {
 internal fun ConditionDto.mapToEntity(): Condition {
     return Condition(
         text = text,
-        icon = icon
+        icon = BASE_URL+icon
     )
 }
 
@@ -100,3 +102,5 @@ internal fun HourDto.mapToEntity(): Hour {
     )
 
 }
+
+

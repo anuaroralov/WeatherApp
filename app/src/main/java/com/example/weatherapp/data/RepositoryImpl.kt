@@ -15,14 +15,14 @@ class RepositoryImpl @Inject constructor(
 ) : Repository {
 
     override suspend fun getWeatherForecast(q: String, days: Int): ForecastWeather {
-        return apiService.getForecast(q,days).mapToEntity()
+        return apiService.getForecast(q, days).mapToEntity()
     }
 
-    override suspend fun getCurrentWeather(q: String): CurrentWeather {
-        return apiService.getWeather(q).mapToEntity()
+    override suspend fun getCurrentWeather(q: String): String? {
+        return apiService.getWeather(q).location?.name
     }
 
-    override suspend fun getListOfWeather():List<CurrentWeather> {
+    override suspend fun getListOfWeather(): List<CurrentWeather> {
         val cities = weatherDao.getWeatherList()
 
         val weatherResults = mutableListOf<CurrentWeatherResponse>()
@@ -36,12 +36,14 @@ class RepositoryImpl @Inject constructor(
             }
         }
 
-        return weatherResults.map{it.mapToEntity()}
+        return weatherResults.map { it.mapToEntity() }
     }
 
     override suspend fun addToList(name: String) {
         weatherDao.insertWeatherItem(CurrentWeatherDbModel(name))
     }
 
-
+    override suspend fun deleteFromList(name: String) {
+        weatherDao.deleteWeatherItem(name)
+    }
 }

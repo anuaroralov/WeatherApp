@@ -37,12 +37,11 @@ class MyListAdapter(private val context: Context, private val onClickListener: (
                 tvFeelsLike.text=currentWeather.current?.feelsLikeC.toString()
                 Glide.with(context)
                     .load(currentWeather.current?.condition?.icon)
-                    .fitCenter()
                     .into(imageView)
 
 
                 root.setOnClickListener {
-
+                    onClickListener
                 }
             }
         }
